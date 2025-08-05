@@ -52,7 +52,9 @@ INSTALLED_APPS = [
     'django_filters',
     'users',
     'products',
-    'orders'
+    'orders',
+    'cart',
+    'wishlist'
 ]
 
 AUTH_USER_MODEL = 'users.User'

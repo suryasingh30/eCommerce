@@ -1,10 +1,13 @@
 from rest_framework import viewsets, permissions, filters
 from rest_framework.pagination import PageNumberPagination
 from django_filters.rest_framework import DjangoFilterBackend
-from django.db.models import Sum
+from django.db.models import Sum, Count
 from .models import Product, Category
 from .serializers import ProductSerializer, CategorySerializer
 from .filters import ProductFilter
+from orders.models import OrderItem
+from rest_framework.permissions import IsAdminUser
+from rest_framework.views import APIView
 
 class IsAdmin(permissions.BasePermission):
     def has_permission(self, request, view):
@@ -42,3 +45,33 @@ class ProductViewSet(viewsets.ModelViewSet):
         if self.request.method in ['POST', 'PUT', 'PATCH', 'DELETE']:
             return [permissions.IsAuthenticated(), IsAdmin()]
         return [permissions.AllowAny()]
+
+class ProductReportView(APIView):
+    permission_classes=[IsAdminUser]
+
+    def get(self, request):
+        sort=request.query_params.get('sort')
+        category_slug=request.query_params.get('category')
+
+        queryset=Product.objects.annotate(
+            total_sold=Sum('orderitem__quantity')
+        ).filter(total_sold__isnull=False)
+
+        if category_slug:
+            queryset=queryset.filter(category__slug=category_slug)
+
+        if sort == 'most_sold':
+            queryset=queryset.order_by('-total_sold')
+
+        elif sort == 'least_sold':
+            queryset=queryset.order_by('total_sold')
+
+        data=[
+            {
+                'product': product.title,
+                'category': product.category.name,
+                'sold': product.total_sold or 0
+            }
+            for product in queryset
+        ]
+        return Response(data)
