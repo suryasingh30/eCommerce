@@ -9,4 +9,4 @@ class OrderListView(generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        return Order.objects.filter(user=self.request).order_by('-ordered_at')
+        return Order.objects.filter(user=self.request.user).order_by('-ordered_at')
